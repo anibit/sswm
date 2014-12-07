@@ -23,12 +23,14 @@ There isn't much to install. The two main Python scripts could be run from a com
 To capture metrics, run:
 
 ```
-python capture_metrics.py```
+python capture_metrics.py
+```
 
 To launch the web server for the results, run:
 
 ```
-python timing_results.py```
+python timing_results.py
+```
 
 There are no command line options, all configuration is done via **capture_metrics.config.json** and **timing_results.config.json**, for the metrics capture and results viewer, respectively.
 
