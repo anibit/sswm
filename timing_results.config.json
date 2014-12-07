@@ -1,0 +1,6 @@
+{
+	"server_host" : "0.0.0.0",
+	"server_port" : 8192,
+	"db_name" : "timings.db",
+	"display_table" : 1
+}

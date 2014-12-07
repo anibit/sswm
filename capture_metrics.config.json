@@ -1,0 +1,14 @@
+{
+	"curl_path" : "curl",
+	"db_name" : "timings.db",
+	"enable_db_reset" : 1,
+	"url_jobs" : [
+				{
+					"url" : "https://google.com"
+				},				
+				{
+					"url" : "http://www.bytecruft.com"
+				}			
+			]
+
+}
