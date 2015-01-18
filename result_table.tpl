@@ -8,6 +8,7 @@
 %# be greatly appreciated.
 
 %import datetime
+%import metrics_util
 
 <h2>Timings Table</h2>
 
@@ -17,7 +18,7 @@
 	</tr>
 	%for timing in timings:
 		<tr>
-			<td>{{datetime.datetime.strptime(timing[0], "%Y-%m-%d %H:%M:%S.%f").strftime("%Y-%m-%d %H:%M:%S")}}</td>
+			<td>{{metrics_util.get_time_struct(timing[0]).strftime("%Y-%m-%d %H:%M:%S")}}</td>
 			<td><a href="{{timing[1]}}">{{timing[1]}}</a></td>
 			<td style="text-align:right">{{"{:.3f}".format(timing[2])}}</td>
 			<td style="text-align:right">{{"{:.3f}".format(timing[3])}}</td>

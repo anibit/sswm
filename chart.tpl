@@ -8,6 +8,7 @@
 %# be greatly appreciated.
 
 %import datetime
+%import metrics_util
 
 <script src="/static/flot/jquery.min.js"></script>
 <script src="/static/flot/jquery.flot.min.js"></script>
@@ -33,10 +34,10 @@ table.chart_table, th.chart_table, td.chart_table {
 			label: "{{timing[0]}}",
 			data: [
 			%for p in timing[1]:
-			 [{{int(datetime.datetime.strptime(p[0], "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=datetime.timezone.utc).timestamp()*1000)}}, {{p[1]}}, {{p[2]}}]
-			 %if p != timing[1][-1]: 
-				,
-			 %end	
+				[{{int(metrics_util.get_time_struct(p[0]).replace(tzinfo=datetime.timezone.utc).timestamp()*1000)}}, {{p[1]}}, {{p[2]}}]
+				%if p != timing[1][-1]: 
+					,
+				%end	
 			%end
 			],
 			clickable: true,
