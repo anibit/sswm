@@ -66,7 +66,8 @@ def create_new_db(filename):
         #create timing entries
         cursor.execute("CREATE TABLE timings (id INTEGER PRIMARY KEY, run_id INTEGER, url_id INTEGER, time_to_first_data real, load_time_sec real, FOREIGN KEY(run_id) REFERENCES jobruns(id), FOREIGN KEY(url_id) REFERENCES urls(id) )")
 
-
+    cursor.execute("CREATE INDEX [index_id_run_id] ON [timings] ( [run_id] ASC);")
+    cursor.execute("CREATE INDEX [index_id_url_id] ON [timings] ([url_id] ASC);")
 
 def db_log_job_runs(db_connection):
     cursor =  db_connection.cursor()
@@ -158,7 +159,7 @@ def run_job(db_connection, config, url, main_run_id):
 def run_main_job():
     startTime = datetime.datetime.utcnow()
 
-    print ("Anibit website timer, (c) 2014 Anibit Technology");
+    print ("Anibit website timer, (c) 2014-2015 Anibit Technology");
     print ("Reading config...")
     with open("capture_metrics.config.json") as f:
         minified = minify_json.json_minify(f.read())

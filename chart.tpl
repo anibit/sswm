@@ -90,7 +90,8 @@ table.chart_table, th.chart_table, td.chart_table {
 				var numeric = parseFloat(x);
 				var date = new Date(numeric);
 				var dateString = date.toUTCString();
-				$("#tooltip").html(dateString + "<br>" +  "Time to data: <strong>" + y + "</strong> <br>Total time: <strong>" + y2 +"</strong><br>(" + item.series.label + ")")
+				$("#tooltip").html(dateString + "<br>" +  "Time to data: <strong>" + y + "</strong> <br>Download time: <strong>" + (y2 - y).toFixed(2) +
+					"</strong> <br>Total time: <strong>" + y2 +"</strong><br>(" + item.series.label + ")")
 					.css({top: item.pageY+5, left: item.pageX+5, "background-color":item.series.color})
 					.fadeIn(200);
 			} else {
