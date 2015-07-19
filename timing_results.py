@@ -153,16 +153,37 @@ def root():
             </form>
         </div>
         <script>
+            ( function() {
+                if (!sessionStorage.getItem('expandedFilter')) {
+                    sessionStorage.setItem('expandedFilter', 0);
+                }
+                var expanded = sessionStorage.getItem('expandedFilter');
+	            var div = document.getElementById("filterexpanderdiv");
+	            var button = document.getElementById("togglefilterbutton");
+	            if(expanded == 1) {
+		            div.style.display = "block";
+		            button.innerHTML = "Hide Filter";
+  	            }
+	            else {
+    		        div.style.display = "none";
+		            button.innerHTML = "Show Filter";
+	            }                
+            })();
+
+            
+
             var toggleFilter = function() {
 	            var div = document.getElementById("filterexpanderdiv");
 	            var button = document.getElementById("togglefilterbutton");
 	            if(div.style.display == "block") {
     		        div.style.display = "none";
 		            button.innerHTML = "Show Filter";
+                    sessionStorage.setItem('expandedFilter', 0);
   	            }
 	            else {
 		            div.style.display = "block";
 		            button.innerHTML = "Hide Filter";
+                    sessionStorage.setItem('expandedFilter', 1);
 	            }                
             };
         </script>
