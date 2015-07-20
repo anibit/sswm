@@ -149,7 +149,9 @@ def parse_timings(filename):
         if len(linesWithTimeout) > 0:
             return (0, 0, False)
     #if we get here, we don't know what happened, something really bad, throw an exception
-    raise SystemExit
+    #raise SystemExit
+    #throwing a SystemExit exception kills the whole script, lets just default to a timeout for now
+    return (0, 0, False)
 
 def run_job(db_connection, config, url, main_run_id):
     curlPath = config['curl_path']
