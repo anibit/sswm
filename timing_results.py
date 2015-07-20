@@ -88,6 +88,13 @@ def root():
     else:
         addTable = (int(includeTable) == 1)
 
+    excludeTimeoutStr = request.query.exclude_timeouts
+
+    if len(excludeTimeoutStr) == 0:
+        excludeTimeouts = False
+    else:
+        excludeTimeouts = (int(excludeTimeoutStr) == 1)
+
     #now do databasey stuff. 
     db_connection = sqlite3.connect(config['db_name'])
 
@@ -96,11 +103,17 @@ def root():
     runs = cursor.fetchall()
 
     if len(filterIDs) > 0:
-        extraFilter = "AND url_id in (%s)" % (",".join([str(x[0]) for x in filterIDs]))
+        extraFilter = "AND url_id in (%s)" % (",".join([str(x) for x in filterIDs]))
     else:
         extraFilter = ""
 
-    query = "SELECT * FROM timings WHERE run_id IN (%s) %s" % (",".join([str(x[0]) for x in runs]), extraFilter)
+    if  excludeTimeouts:
+        timeoutFilter = "AND timed_out == 0"
+    else:
+        timeoutFilter = ""
+
+
+    query = "SELECT * FROM timings WHERE run_id IN (%s) %s %s" % (",".join([str(x[0]) for x in runs]), extraFilter, timeoutFilter)
     cursor.execute(query)
     timings = cursor.fetchall()
 
@@ -116,11 +129,11 @@ def root():
 
     urls = dict( [ (x[0], x[1]) for x in url_results ]) #make a dictionary of ids -> url string
     run_dates = dict( [(x[0], x[1]) for x in runs]) # make a dictionary of run ids -> run job time
-    timing_data = sorted([ (run_dates[x[1]], urls[x[2]], x[3], x[4]) for x in timings], key = lambda x: x[0])
+    timing_data = sorted([ (run_dates[x[1]], urls[x[2]], x[3], x[4], x[5]) for x in timings], key = lambda x: x[0])
 
     chart_timing_data = [ 
                         (url,
-                         sorted([(run_dates[t[1]], t[3], t[4]) for t in timings if url_id == t[2]], key = lambda x: x[0])
+                         sorted([(run_dates[t[1]], t[3], t[4], t[5]) for t in timings if url_id == t[2]], key = lambda x: x[0])
                          ) 
                          for (url_id, url) in urls.items()]
 
@@ -136,7 +149,7 @@ def root():
                                  + ">" + url + "<br>" for (url_id, url) in all_urls.items()])
 
     include_table_filter_check = ("<input type=\"checkbox\" name=\"include_table\" value=\"1\"" + (" checked" if addTable else "") + "> Include Detail Table<br>") if config['display_table'] else ""
-
+    include_timeouts_filter_check = ("<input type=\"checkbox\" name=\"exclude_timeouts\" value=\"1\"" + (" checked" if excludeTimeouts else "") + "> Exclude Timeouts <br>") 
     result = html_header() + '''
         <button  id="togglefilterbutton" onClick="toggleFilter()">Show Filter</button>
         <div id="filterexpanderdiv" style="display:none;">
@@ -146,9 +159,9 @@ def root():
                 To: <input name="to_time" type = "date" value="%s"></input>
                 <br>
                 Filter: <br>
-                    %s      
-                    
-                    %s 
+                    %s                    
+                    %s
+                    %s
                 <input type="submit" Value="refresh"></input>
             </form>
         </div>
@@ -187,7 +200,7 @@ def root():
 	            }                
             };
         </script>
-        ''' % (fromTime, toTime, url_filter_items, include_table_filter_check )
+        ''' % (fromTime, toTime, url_filter_items, include_table_filter_check, include_timeouts_filter_check )
 
     result += template("chart", timings = chart_timing_data)
 

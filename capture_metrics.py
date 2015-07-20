@@ -64,7 +64,7 @@ def create_new_db(filename):
         cursor.execute("CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT)")
 
         #create timing entries
-        cursor.execute("CREATE TABLE timings (id INTEGER PRIMARY KEY, run_id INTEGER, url_id INTEGER, time_to_first_data real, load_time_sec real, FOREIGN KEY(run_id) REFERENCES jobruns(id), FOREIGN KEY(url_id) REFERENCES urls(id) )")
+        cursor.execute("CREATE TABLE timings (id INTEGER PRIMARY KEY, run_id INTEGER, url_id INTEGER, time_to_first_data real, load_time_sec real, timed_out INTEGER, FOREIGN KEY(run_id) REFERENCES jobruns(id), FOREIGN KEY(url_id) REFERENCES urls(id) )")
 
     cursor.execute("CREATE INDEX [index_id_run_id] ON [timings] ( [run_id] ASC);")
     cursor.execute("CREATE INDEX [index_id_url_id] ON [timings] ([url_id] ASC);")
@@ -100,11 +100,11 @@ def db_get_url_id(db_connection, url):
 
     return result[0]
 
-def db_log_job(db_connection, main_run_id, url, timeToFirstData, totalTime):
+def db_log_job(db_connection, main_run_id, url, timeToFirstData, totalTime, fetched_data):
     url_id = db_get_url_id(db_connection, url)
     cursor = db_connection.cursor()
-    cursor.execute("INSERT INTO timings(run_id, url_id, time_to_first_data, load_time_sec) VALUES (?, ?, ?, ?)", 
-                   (main_run_id, url_id, timeToFirstData, totalTime))
+    cursor.execute("INSERT INTO timings(run_id, url_id, time_to_first_data, load_time_sec, timed_out) VALUES (?, ?, ?, ?, ?)", 
+                   (main_run_id, url_id, timeToFirstData, totalTime, 0 if fetched_data else 1))
     db_connection.commit()
 
 
@@ -127,33 +127,43 @@ def parse_timings(filename):
 
     linesWithRecvData = [ l for l in linesWithTimings if re.match(r".*<=\sRecv\sdata.*", l)]
 
+    if len(linesWithInfoconnected) > 0 and len(linesWithInfoConnLeftIntact) > 0 and len(linesWithRecvData) > 0:
 
-    startTime = get_time(linesWithInfoconnected[0])
-    endTime = get_time(linesWithInfoConnLeftIntact[0])
-    ttfdb = get_time(linesWithRecvData[0])
+        startTime = get_time(linesWithInfoconnected[0])
+        endTime = get_time(linesWithInfoConnLeftIntact[0])
+        ttfdb = get_time(linesWithRecvData[0])
 
-    totalTime = endTime - startTime
-    #if the result is negative, we crossed a day boundary
-    if totalTime < 0:
-        totalTime = totalTime + 24*3600
+        totalTime = endTime - startTime
+        #if the result is negative, we crossed a day boundary
+        if totalTime < 0:
+            totalTime = totalTime + 24*3600
 
-    timeToFirstDataByteTime = ttfdb - startTime
+        timeToFirstDataByteTime = ttfdb - startTime
 
-    if timeToFirstDataByteTime < 0:
-        timeToFirstDataByteTime = timeToFirstDataByteTime + 24*3600
+        if timeToFirstDataByteTime < 0:
+            timeToFirstDataByteTime = timeToFirstDataByteTime + 24*3600
 
-    return (timeToFirstDataByteTime, totalTime)
-
+        return (timeToFirstDataByteTime, totalTime, True)
+    else:
+        linesWithTimeout = [l for l in linesWithTimings if re.match(r".*Info:\sFailed to connect", l)]
+        if len(linesWithTimeout) > 0:
+            return (0, 0, False)
+    #if we get here, we don't know what happened, something really bad, throw an exception
+    raise SystemExit
 
 def run_job(db_connection, config, url, main_run_id):
     curlPath = config['curl_path']
     curlOptions = "-k --trace-ascii timings.txt --trace-time"
     with open(os.devnull, 'w') as devnull:
         call(curlPath + " " + curlOptions + " " + url, stdout= devnull)
-    (timeToFirstData, totalTime) = parse_timings("timings.txt")
-    db_log_job(db_connection, main_run_id, url, timeToFirstData, totalTime)
+    (timeToFirstData, totalTime, fetched_data) = parse_timings("timings.txt")
+    db_log_job(db_connection, main_run_id, url, timeToFirstData, totalTime, fetched_data)
     print ("url: " + url)
-    print ("\ttime: " + str(totalTime) + " seconds")
+    if fetched_data:
+        print ("\ttime: " + str(totalTime) + " seconds")
+    else:
+        print ("\tsite TIMED OUT!")
+       
 
 
 def run_main_job():

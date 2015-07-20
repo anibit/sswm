@@ -34,7 +34,7 @@ table.chart_table, th.chart_table, td.chart_table {
 			label: "{{timing[0]}}",
 			data: [
 			%for p in timing[1]:
-				[{{int(metrics_util.get_time_struct(p[0]).replace(tzinfo=datetime.timezone.utc).timestamp()*1000)}}, {{p[1]}}, {{p[2]}}]
+				[{{int(metrics_util.get_time_struct(p[0]).replace(tzinfo=datetime.timezone.utc).timestamp()*1000)}}, {{p[1]}}, {{p[2]}}, {{p[3]}}]
 				%if p != timing[1][-1]: 
 					,
 				%end	
@@ -86,14 +86,23 @@ table.chart_table, th.chart_table, td.chart_table {
 			if (item) {
 				var x = item.datapoint[0].toFixed(2),
 					y = item.datapoint[1].toFixed(2),
-					y2 = item.series.data[item.dataIndex][2].toFixed(2);
+					y2 = item.series.data[item.dataIndex][2].toFixed(2),
+					timeout = item.series.data[item.dataIndex][3];
+				
 				var numeric = parseFloat(x);
 				var date = new Date(numeric);
 				var dateString = date.toUTCString();
-				$("#tooltip").html(dateString + "<br>" +  "Time to data: <strong>" + y + "</strong> <br>Download time: <strong>" + (y2 - y).toFixed(2) +
-					"</strong> <br>Total time: <strong>" + y2 +"</strong><br>(" + item.series.label + ")")
-					.css({top: item.pageY+5, left: item.pageX+5, "background-color":item.series.color})
-					.fadeIn(200);
+				if (timeout !== 1) {
+					$("#tooltip").html(dateString + "<br>" +  "Time to data: <strong>" + y + "</strong> <br>Download time: <strong>" + (y2 - y).toFixed(2) +
+						"</strong> <br>Total time: <strong>" + y2 +"</strong><br>(" + item.series.label + ")")
+						.css({top: item.pageY+5, left: item.pageX+5, "background-color":item.series.color})
+						.fadeIn(200);
+				} else {
+					$("#tooltip").html(dateString + "<br><strong>TIMED OUT</strong><br>(" + item.series.label + ")")
+						.css({top: item.pageY+5, left: item.pageX+5, "background-color":item.series.color})
+						.fadeIn(200);
+					
+				}
 			} else {
 				$("#tooltip").hide();
 			}
