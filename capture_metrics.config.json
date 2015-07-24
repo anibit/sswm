@@ -4,10 +4,12 @@
 	"enable_db_reset" : 1,
 	"url_jobs" : [
 				{
-					"url" : "https://google.com"
+					"url" : "https://google.com",
+					"nickname" : "Google"
 				},				
 				{
-					"url" : "http://www.bytecruft.com"
+					"url" : "http://www.bytecruft.com",
+					"nickname" : "ByteCruft Blog"
 				}			
 			]
 

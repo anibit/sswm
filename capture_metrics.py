@@ -61,7 +61,7 @@ def create_new_db(filename):
         cursor.execute("CREATE TABLE jobruns (id INTEGER PRIMARY KEY, date DATETIME, tot_runtime_sec real)")
 
         #create urlstable
-        cursor.execute("CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT)")
+        cursor.execute("CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, nickname TEXT)")
 
         #create timing entries
         cursor.execute("CREATE TABLE timings (id INTEGER PRIMARY KEY, run_id INTEGER, url_id INTEGER, time_to_first_data real, load_time_sec real, timed_out INTEGER, FOREIGN KEY(run_id) REFERENCES jobruns(id), FOREIGN KEY(url_id) REFERENCES urls(id) )")
@@ -88,20 +88,25 @@ def db_log_main_run_time(db_connection, job_run_id, run_time):
     db_connection.commit()
 
 
-def db_get_url_id(db_connection, url):
+def db_get_url_id(db_connection, url, nickname):
     cursor = db_connection.cursor()
     cursor.execute ("SELECT * FROM urls WHERE url = ?", (url,))
     result = cursor.fetchone()
 
+
     if result is None:
-        cursor.execute("INSERT INTO urls(url) VALUES (?)", (url,))
+        cursor.execute("INSERT INTO urls(url, nickname) VALUES (?, ?)", (url, nickname))
         db_connection.commit()
         return cursor.lastrowid
 
+    if not result[2] == nickname:
+        cursor.execute("UPDATE urls SET nickname=? WHERE id=?", (nickname, result[0]))
+        db_connection.commit()
+
     return result[0]
 
-def db_log_job(db_connection, main_run_id, url, timeToFirstData, totalTime, fetched_data):
-    url_id = db_get_url_id(db_connection, url)
+def db_log_job(db_connection, main_run_id, url, url_nickname, timeToFirstData, totalTime, fetched_data):
+    url_id = db_get_url_id(db_connection, url, url_nickname)
     cursor = db_connection.cursor()
     cursor.execute("INSERT INTO timings(run_id, url_id, time_to_first_data, load_time_sec, timed_out) VALUES (?, ?, ?, ?, ?)", 
                    (main_run_id, url_id, timeToFirstData, totalTime, 0 if fetched_data else 1))
@@ -153,13 +158,13 @@ def parse_timings(filename):
     #throwing a SystemExit exception kills the whole script, lets just default to a timeout for now
     return (0, 0, False)
 
-def run_job(db_connection, config, url, main_run_id):
+def run_job(db_connection, config, url, url_nickname, main_run_id):
     curlPath = config['curl_path']
     curlOptions = "-k --trace-ascii timings.txt --trace-time"
     with open(os.devnull, 'w') as devnull:
         call(curlPath + " " + curlOptions + " " + url, stdout= devnull)
     (timeToFirstData, totalTime, fetched_data) = parse_timings("timings.txt")
-    db_log_job(db_connection, main_run_id, url, timeToFirstData, totalTime, fetched_data)
+    db_log_job(db_connection, main_run_id, url, url_nickname, timeToFirstData, totalTime, fetched_data)
     print ("url: " + url)
     if fetched_data:
         print ("\ttime: " + str(totalTime) + " seconds")
@@ -184,7 +189,7 @@ def run_main_job():
 
     #get list of URL's
     for urlJob in config['url_jobs']:
-        run_job(dbConnection, config, urlJob['url'], jobRunID)
+        run_job(dbConnection, config, urlJob['url'], urlJob['nickname'], jobRunID)
 
     endTime = datetime.datetime.utcnow()
 

@@ -3,7 +3,7 @@ Stupid Simple Website Metrics
 
 This is a tool for logging the overall performance of website over time.
 
-It's written in Python and Javascript and is meant to be run from one machine to test the response time of another machine. It requires minimal setup beyond scheduling the metrics script (e.g. cron) and running the results views. Its only external dependency is [curl](http://curl.haxx.se/).
+It's written in Python and Javascript and is meant to be run from one machine to test the response time of another machine. It requires minimal setup beyond scheduling the metrics script (e.g. cron) and running the results views. Its only required external dependency is [curl](http://curl.haxx.se/). There is also an optional dependency on [XslxWriter](https://github.com/jmcnamara/XlsxWriter), if you want to enable downloads of Excell files of your data.
 
 
 Overview
@@ -17,7 +17,8 @@ Getting started
 ###Installation
 
 
-There isn't much to install. The two main Python scripts could be run from a command shell.
+There isn't much to install. The two main Python scripts could be run from a command shell. If you want to enable spreadsheet downloads of metrics, you must install the XslxWriter into your Python 3.x environment. 
+
 
 
 To capture metrics, run:
@@ -34,6 +35,15 @@ python timing_results.py
 
 There are no command line options, all configuration is done via **capture_metrics.config.json** and **timing_results.config.json**, for the metrics capture and results viewer, respectively.
 
+If you want to allow users to be able to download a spreadsheet of the data, you must install XlsxWriter, typically with something like:
+ 
+```
+pip install XlsxWriter
+```
+
+*You will need administrative privileges to install that*
+
+If you cannot, or do not want to install, XslxWriter, you can turn off that functionality entirely by editing the **timing_results.config.json** *enable_spreadsheet* option to '0'.
 
 Ideally, you want to capture metrics over time, the greatest power in this tool is doing historical trend analysis. ( *"Why is my site slow, when did it first get slow?*") To do this, you want to run the capture metrics script on a period basis. On Linux, you can schedule a cron task to do this. On Windows, you can use the "Scheduled Tasks" or "Task Scheduler", depending on what version of Windows you have. The period task needs to have the appropriate permissions to access external networks and to have read/write access to the "working directory" for access to the database, and to store temporary files while collecting metrics. 
 
@@ -50,7 +60,7 @@ The metrics capture is configured via the **capture_metrics.config.json** file. 
 | **curl_path** | The executable command used to launch curl<br>this can be left as is if curl is in your systems's path, <br>or resides in your script's working directory.         |
 | **db_name**   | The name of the SQLite database used for storing <br>metrics. It will be created if it does not already exist |
 | **enable_db_reset** | This allows the databse to be reset/cleared.<br> If the version a new version of the script requires a new<br> schema, this will detect it and re-create the database.<br>**THIS CAN WIPE OUT YOUR DATA,<br> SET TO '0' TO PROTECT IT** |
-| **url_jobs** | This is a JSON array of objects containing the urls to test<br>They are objects s that options may be added in future<br>script versions |
+| **url_jobs** | This is a JSON array of objects containing the urls to test<br>They are objects in that options may be added in future<br>script versions. The "nickname" member of the object is used to create friendly name for the URL |
 
 
 The timing results server is configured via the **timing_results.config.json** file. The following options are available. 
@@ -59,8 +69,10 @@ The timing results server is configured via the **timing_results.config.json** f
 | :------------:| ------------ |
 | **server_host** | The host name used to start the Bottle.py server |
 | **server_port** | The post name used to start the Bottle.py server |
-| **db_name** | The nname of the database containing the metrics. <br> This must match what is used by the <br>metrics capture script. |
+| **db_name** | The name of the database containing the metrics. <br> This must match what is used by the <br>metrics capture script. |
 | **display_table** | Set to '1' to include the timings table in the output. <br> The timing table can get  lengthy, so this removes it. |
+| **enable_spreadsheet** | Set to '1' to add a "Download Spreadsheet" button, or "0' to hide it, if you do not want it available, or you cannot install the required XlsxWriter python module. | 
+| **temp_public_path** | The path to server temporary public files. This is not currently used, but may be in the future.
 
 Viewing Metrics
 ---------------
@@ -74,7 +86,7 @@ http://<your server>:<your port>
 There are a couple of url parameters. This is useful is you want to create bookmarks to specific timings, or share particular views with others.
 
 ```
-http://<your server>:<your port>/?from_time=<lower bound time>&to_time=<uppper bound time>&filter=<url id>
+http://<your server>:<your port>/?from_time=<lower bound time>&to_time=<uppper bound time>&filter=<url id #1>&filter=<url id#2> ...
 ``` 
 
 the from_time and to_time parameters let you specify the time span over which you wish to view metrics. Right now they are limit to whole days, and are based on UTC time. IT would be nice to make this a little more user friendly one day. The format for the time is:
@@ -89,13 +101,15 @@ If the **from_time** parameter is missing, it is assumed to be 30 days earlier t
 
 The filter parameter is based on the internal database ID of the URL. This is meant to be used by the form on the page, but the id should remain static, so that url ids can be used in bookmarks.
 
-A filter ID of '-1' is a special ID that means "all urls for which there are metrics in the given time range".
+If no filter IDs are specified, data all urls for which there are metrics in the given time range are downloaded.
 
 An example url might look like:
 
 ```
-http://metrics-server:8192/?from_time=2015-02-22&to_time=2015-02-28&filter=-1
+http://metrics-server:8192/?from_time=2015-02-22&to_time=2015-02-28&filter=3
 ```
+
+If enabled, the "Download Spreadsheet" button will appear on the page. The spreadsheet will be dynamically generated on the server based on the currently selected filter criteria on the filter form (not the url parameters!)
 
 
 Known Issues and Limitations
@@ -110,10 +124,14 @@ Known Issues and Limitations
    * All times and dates are currently displayed in UTC/GMT. This is likely to be addressed in future versions.
    * The url filter resets to "(all urls)" on every refresh. This may or may not be fixed.
    * There is not a lot of attention paid to security. If you wish to run this as a publicly facing website, please, audit the code, (there is not a lot of it). If you spot any problems, let me know and I will incorporate it into a future version.
+  * Excell downloads
+   * In some viewers, the formulas are not updated automatically when you open the document. LibreOffice has this limitation, hit "Ctrl+Shift+F9" on Windows to force a recalculation on the entire spreadsheet
   * General
    * Python, Javascript, SQL, and HTML are not my native tongues as a developer. I come from a desktop and embedded development world using a lot of the _curly bracket_ languages. I speak Python and Javascript with a C#/C++/Java accent. If you see something in my code you think is horrendous from your experience as a seasoned web developer, enlightenment would be greatly appreciated.
    * I have only tested this on Windows, but I believe it ought to work on other platforms as well. If you are aware of issues on Linux or OSX, let me know, and I will merge in your changes.  
    * This tool was written to monitor the performance on my business's website, [Anibit Technology](https://anibit.com), which is built on PHP and Drupal.
+  * Upgrading from an old version
+   * Some of the DB schema has changed a bit over time in different versions of this application. This may cause the metrics capture or viewer to crash if you use a new version of the code with an old database. I don't have a great system for dealing with this. All of the changes are backwards compatible, so you should be able to create a brand new metrics db (by renaming your old one, and running a capture), and then export the data from your old DB to the new one. I may make a script to try and automate this in a future version  
 
 
 Acknowledgments
@@ -126,6 +144,7 @@ This tool is made possible with the following:
   * [JSON.minify.py](https://github.com/getify/JSON.minify)
   * [flot library](www.flotcharts.org)
   * [curl](http://curl.haxx.se/)
+  * [XslxWriter](https://github.com/jmcnamara/XlsxWriter)
   * and copious visits to Stack Overflow
 
 License
